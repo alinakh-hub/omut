@@ -1,0 +1,579 @@
+<!doctype html>
+<html lang="ru">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width,initial-scale=1,viewport-fit=cover">
+<meta name="theme-color" content="#0c1316">
+<meta name="apple-mobile-web-app-capable" content="yes">
+<title>Омут памяти</title>
+<link rel="preconnect" href="https://fonts.googleapis.com">
+<link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+<link rel="stylesheet" href="https://fonts.googleapis.com/css2?family=Golos+Text:wght@400;500;600&family=Spectral:ital,wght@0,300;0,400;0,500;1,300;1,400&display=swap">
+<style>
+/* Layout: one narrow column, a misty header over a two-tab tool (record a dream / search at déjà vu). Dark first, built for reading at night. */
+:root {
+  --bg: #0c1316;          /* basin ink, leans teal */
+  --surface: #121c20;
+  --line: #223037;
+  --fg: #dfe9eb;
+  --muted: #8fa3a9;
+  --accent: #9fd3d8;      /* memory silver */
+  --accent-fg: #0c1316;
+  --mark: #1f3d44;
+  --danger: #e59a9a;
+  --mist1: rgba(159, 211, 216, 0.16);
+  --mist2: rgba(138, 156, 224, 0.13);
+  --font-display: "Spectral", "Georgia", "Times New Roman", serif;
+  --font-ui: "Golos Text", system-ui, -apple-system, "Segoe UI", sans-serif;
+  color-scheme: dark;
+}
+@media (prefers-color-scheme: light) {
+  :root:not([data-theme="dark"]) {
+    --bg: #edf2f2; --surface: #f8fbfb; --line: #cbd8da; --fg: #14252a; --muted: #55696f;
+    --accent: #1b6670; --accent-fg: #ffffff; --mark: #cfe6e3; --danger: #a03c3c;
+    --mist1: rgba(27, 102, 112, 0.14); --mist2: rgba(100, 120, 190, 0.13);
+    color-scheme: light;
+  }
+}
+:root[data-theme="light"] {
+  --bg: #edf2f2; --surface: #f8fbfb; --line: #cbd8da; --fg: #14252a; --muted: #55696f;
+  --accent: #1b6670; --accent-fg: #ffffff; --mark: #cfe6e3; --danger: #a03c3c;
+  --mist1: rgba(27, 102, 112, 0.14); --mist2: rgba(100, 120, 190, 0.13);
+  color-scheme: light;
+}
+
+* { box-sizing: border-box; }
+body {
+  margin: 0;
+  background: var(--bg);
+  color: var(--fg);
+  font: 400 1rem/1.55 var(--font-ui);
+  padding-block: 8px 56px;
+  padding-left: max(16px, env(safe-area-inset-left, 0px));
+  padding-right: max(16px, env(safe-area-inset-right, 0px));
+}
+.wrap { max-width: 40rem; margin-inline: auto; min-width: 0; }
+
+/* Header */
+.top { position: relative; overflow: hidden; padding-block: 36px 22px; }
+.mist {
+  position: absolute; inset: -45% -25%; pointer-events: none;
+  background:
+    radial-gradient(40% 50% at 28% 42%, var(--mist1), transparent 70%),
+    radial-gradient(34% 46% at 72% 58%, var(--mist2), transparent 70%);
+  filter: blur(22px);
+  animation: drift 30s ease-in-out infinite alternate;
+}
+@keyframes drift { to { transform: translate3d(6%, 4%, 0) scale(1.08); } }
+@media (prefers-reduced-motion: reduce) { .mist { animation: none; } }
+.top > *:not(.mist) { position: relative; }
+.kicker { margin: 0 0 6px; font-size: 0.75rem; letter-spacing: 0.14em; text-transform: uppercase; color: var(--muted); }
+h1 { margin: 0; font: 300 clamp(2.2rem, 9vw, 3.1rem)/1.05 var(--font-display); letter-spacing: -0.01em; text-wrap: balance; }
+.lede { margin: 12px 0 0; max-width: 34rem; color: var(--muted); }
+
+/* Tabs */
+.tabs { display: flex; gap: 4px; border-bottom: 1px solid var(--line); margin-block: 8px 22px; }
+.tab {
+  appearance: none; background: none; border: 0; border-bottom: 2px solid transparent;
+  margin-bottom: -1px; padding: 10px 14px; color: var(--muted); font: 500 0.95rem var(--font-ui); cursor: pointer;
+}
+.tab[aria-selected="true"] { color: var(--fg); border-bottom-color: var(--accent); }
+.tab:hover { color: var(--fg); }
+
+/* Type + controls */
+h2 { margin: 0 0 12px; font: 400 1.45rem/1.2 var(--font-display); text-wrap: balance; }
+h3 { margin: 0; font: 500 0.78rem/1.2 var(--font-ui); letter-spacing: 0.1em; text-transform: uppercase; color: var(--muted); }
+.small { font-size: 0.85rem; }
+.muted { color: var(--muted); }
+textarea {
+  display: block; width: 100%; min-height: 9.5rem; resize: vertical;
+  background: var(--surface); color: var(--fg);
+  border: 1px solid var(--line); border-radius: 6px; padding: 14px 16px;
+  font: 400 1.1rem/1.55 var(--font-display);
+}
+textarea::placeholder { color: var(--muted); opacity: 0.8; }
+textarea:focus-visible, .btn:focus-visible, .tab:focus-visible, .link:focus-visible { outline: 2px solid var(--accent); outline-offset: 2px; }
+.row { display: flex; flex-wrap: wrap; align-items: center; gap: 10px 16px; margin-top: 12px; }
+.btn {
+  appearance: none; border: 1px solid var(--accent); background: var(--accent); color: var(--accent-fg);
+  font: 600 0.95rem var(--font-ui); padding: 10px 18px; border-radius: 6px; cursor: pointer;
+}
+.btn:disabled { opacity: 0.5; cursor: default; }
+.link { appearance: none; background: none; border: 0; padding: 4px 0; font: 500 0.85rem var(--font-ui); color: var(--muted); cursor: pointer; text-decoration: underline; text-underline-offset: 3px; }
+.link:hover { color: var(--fg); }
+.link.danger { color: var(--danger); }
+.status { min-height: 1.4em; margin: 10px 0 0; font-size: 0.9rem; color: var(--muted); }
+.hint { margin: 10px 0 0; font-size: 0.85rem; color: var(--muted); }
+
+/* Lists and cards */
+.section-head { display: flex; align-items: baseline; justify-content: space-between; gap: 12px; margin-block: 34px 12px; }
+.stack { display: flex; flex-direction: column; gap: 12px; }
+.card { background: var(--surface); border: 1px solid var(--line); border-radius: 6px; padding: 14px 16px; min-width: 0; }
+.meta { display: flex; flex-wrap: wrap; align-items: baseline; gap: 4px 12px; font-size: 0.82rem; color: var(--muted); font-variant-numeric: tabular-nums; }
+.tag { border: 1px solid var(--line); border-radius: 4px; padding: 0 6px; font-size: 0.72rem; letter-spacing: 0.06em; text-transform: uppercase; }
+.dream { margin: 8px 0 0; font: 400 1.08rem/1.6 var(--font-display); overflow-wrap: anywhere; white-space: pre-wrap; }
+.actions { display: flex; flex-wrap: wrap; align-items: center; gap: 4px 14px; margin-top: 8px; }
+.notice { margin: 0 0 12px; padding: 10px 14px; border: 1px dashed var(--line); border-radius: 6px; font-size: 0.9rem; color: var(--muted); }
+mark { background: var(--mark); color: inherit; border-radius: 2px; padding: 0 2px; }
+
+/* Results */
+.score { display: flex; align-items: center; gap: 12px; margin-top: 10px; font-size: 0.9rem; font-variant-numeric: tabular-nums; }
+.meter { flex: 1; max-width: 12rem; height: 4px; background: var(--line); border-radius: 2px; overflow: hidden; }
+.meter > span { display: block; height: 100%; background: var(--accent); }
+.why { margin: 6px 0 0; font-size: 0.92rem; }
+.empty { padding: 18px 16px; border: 1px dashed var(--line); border-radius: 6px; color: var(--muted); }
+.foot { margin-top: 36px; padding-top: 14px; border-top: 1px solid var(--line); font-size: 0.85rem; color: var(--muted); }
+.foot p { margin: 0 0 6px; }
+.field { position: relative; }
+.field textarea { padding-right: 62px; }
+.mic {
+  position: absolute; top: 10px; right: 10px; width: 42px; height: 42px; padding: 0;
+  display: grid; place-items: center; border-radius: 50%;
+  border: 1px solid var(--line); background: var(--bg); color: var(--accent); cursor: pointer;
+}
+.mic svg { width: 20px; height: 20px; }
+.mic:hover { border-color: var(--accent); }
+.mic:focus-visible { outline: 2px solid var(--accent); outline-offset: 2px; }
+.mic.rec { background: var(--danger); border-color: var(--danger); color: var(--accent-fg); animation: pulse 1.4s ease-in-out infinite; }
+@keyframes pulse { 50% { box-shadow: 0 0 0 7px transparent; } 0% { box-shadow: 0 0 0 0 var(--danger); } }
+@media (prefers-reduced-motion: reduce) { .mic.rec { animation: none; } }
+</style>
+</head>
+<body>
+<div class="wrap">
+  <header class="top">
+    <div class="mist" aria-hidden="true"></div>
+    <p class="kicker">дневник снов</p>
+    <h1>Омут памяти</h1>
+    <p class="lede">Записывайте сны сразу после пробуждения. Когда накроет дежавю, проверьте, снилось ли вам что-то похожее.</p>
+  </header>
+
+  <div class="tabs" role="tablist" aria-label="Разделы">
+    <button class="tab" role="tab" id="tab-record" aria-controls="view-record" aria-selected="true" type="button">Записать сон</button>
+    <button class="tab" role="tab" id="tab-deja" aria-controls="view-deja" aria-selected="false" type="button">У меня дежавю</button>
+  </div>
+
+  <main>
+    <section id="view-record" role="tabpanel" aria-labelledby="tab-record">
+      <h2>Что вам снилось?</h2>
+      <form id="recForm">
+        <label for="dreamText" class="muted small" style="display:block;margin-bottom:8px">Место, люди, предметы, слова, ощущения. Чем больше деталей, тем лучше поиск.</label>
+        <div class="field"><textarea id="dreamText" placeholder="Я стоял на деревянном пирсе, вода была неподвижной…"></textarea><button type="button" class="mic" data-target="dreamText" data-status="saveStatus" aria-pressed="false" aria-label="Диктовать голосом" title="Диктовать голосом"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><rect x="9" y="3" width="6" height="11" rx="3"/><path d="M5 11a7 7 0 0 0 14 0M12 18v3"/></svg></button></div>
+        <p class="hint" id="micHint"></p>
+        <div class="row">
+          <button class="btn" id="saveBtn" type="submit" disabled>Сохранить сон</button>
+          <span class="muted small">Время записи фиксируется при сохранении, текст потом не меняется.</span>
+        </div>
+        <p class="status" id="saveStatus" role="status" aria-live="polite">Подключаю хранилище…</p>
+      </form>
+
+      <div class="section-head">
+        <h3>Записанные сны</h3>
+        <span class="muted small" id="count"></span>
+      </div>
+      <p class="notice" id="exNote" hidden>Пока здесь примеры, чтобы показать, как всё работает. Они исчезнут после вашей первой записи.</p>
+      <div class="stack" id="list"></div>
+    </section>
+
+    <section id="view-deja" role="tabpanel" aria-labelledby="tab-deja" hidden>
+      <h2>Что сейчас кажется знакомым?</h2>
+      <form id="dejaForm">
+        <label for="dejaText" class="muted small" style="display:block;margin-bottom:8px">Опишите, что видите и чувствуете: место, людей, предметы, фразы.</label>
+        <div class="field"><textarea id="dejaText" placeholder="Стою у старой дачи рядом с озером, пахнет дымом…"></textarea><button type="button" class="mic" data-target="dejaText" data-status="findStatus" aria-pressed="false" aria-label="Диктовать голосом" title="Диктовать голосом"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><rect x="9" y="3" width="6" height="11" rx="3"/><path d="M5 11a7 7 0 0 0 14 0M12 18v3"/></svg></button></div>
+        <div class="row">
+          <button class="btn" id="findBtn" type="submit">Найти в моих снах</button>
+          <button class="link" id="stopBtn" type="button" hidden>Остановить</button>
+        </div>
+        <p class="status" id="findStatus" role="status" aria-live="polite"></p>
+      </form>
+      <div class="stack" id="results" style="margin-top:18px"></div>
+      <div class="foot">
+        <p>Сходство не доказывает связь. Память легко находит совпадения задним числом.</p>
+        <p>Самое ценное — сны, записанные до события. Поэтому записи в дневнике нельзя редактировать.</p>
+      </div>
+    </section>
+  </main>
+  <p class="muted small" id="storeNote" style="margin-top:28px"></p>
+</div>
+
+<script>
+(function () {
+  "use strict";
+
+  var $ = function (s) { return document.querySelector(s); };
+  function el(tag, cls, text) {
+    var e = document.createElement(tag);
+    if (cls) e.className = cls;
+    if (text != null) e.textContent = text;
+    return e;
+  }
+
+  /* ---------- text helpers ---------- */
+  var STOP = new Set(["этот","этого","этой","были","была","было","будет","меня","тоже","очень","когда","потом","только","чтобы","который","которая","которые","свой","своей","себя","есть","если","такой","такая","него","даже","еще","там","тут","здесь","вдруг","словно","будто","сразу","просто","почему","знала","знал"]);
+  function normWord(w) { return w.toLowerCase().replace(/ё/g, "е"); }
+  function stemOf(w) { return w.slice(0, 5); }
+  function stemSet(t) {
+    var s = new Set();
+    (normWord(t).match(/\p{L}+/gu) || []).forEach(function (w) {
+      if (w.length >= 4 && !STOP.has(w)) s.add(stemOf(w));
+    });
+    return s;
+  }
+  function highlight(text, set) {
+    var frag = document.createDocumentFragment();
+    text.split(/(\p{L}+)/u).forEach(function (p, i) {
+      if (i % 2 === 1) {
+        var w = normWord(p);
+        if (w.length >= 4 && !STOP.has(w) && set && set.has(stemOf(w))) {
+          var m = document.createElement("mark");
+          m.textContent = p;
+          frag.appendChild(m);
+          return;
+        }
+      }
+      frag.appendChild(document.createTextNode(p));
+    });
+    return frag;
+  }
+  function plural(n, f) {
+    var a = Math.abs(n) % 100, b = a % 10;
+    if (a > 10 && a < 20) return f[2];
+    if (b > 1 && b < 5) return f[1];
+    if (b === 1) return f[0];
+    return f[2];
+  }
+  function fmt(iso) {
+    var d = new Date(iso);
+    var opts = { day: "numeric", month: "long", hour: "2-digit", minute: "2-digit" };
+    if (d.getFullYear() !== new Date().getFullYear()) opts.year = "numeric";
+    try { return new Intl.DateTimeFormat("ru-RU", opts).format(d); } catch (e) { return d.toLocaleString(); }
+  }
+  function ago(iso) {
+    var d = Math.floor((Date.now() - new Date(iso).getTime()) / 864e5);
+    if (d <= 0) return "сегодня";
+    if (d === 1) return "вчера";
+    if (d < 60) return d + " " + plural(d, ["день", "дня", "дней"]) + " назад";
+    var m = Math.floor(d / 30);
+    return m + " " + plural(m, ["месяц", "месяца", "месяцев"]) + " назад";
+  }
+
+  /* ---------- state ---------- */
+  var DAY = 864e5;
+  var examples = [
+    { id: "ex1", example: true, createdAt: new Date(Date.now() - 9 * DAY).toISOString(),
+      text: "Я стоял на деревянном пирсе у озера, вода была совсем неподвижной. Рядом старая дача с зелёными ставнями, на крыльце сидела бабушка в жёлтой косынке и что-то чистила в миске. Пахло дымом и мокрыми досками." },
+    { id: "ex2", example: true, createdAt: new Date(Date.now() - 4 * DAY).toISOString(),
+      text: "Мы с коллегами ехали в стеклянном лифте, он остановился между этажами, а за стеклом шёл снег. Кто-то сказал: «Главное, не смотрите вниз». Я почему-то знал, что сейчас погаснет свет." },
+    { id: "ex3", example: true, createdAt: new Date(Date.now() - 2 * DAY).toISOString(),
+      text: "Длинный школьный коридор, но стены белые, как в больнице. В конце коридора дверь с табличкой 214. Я долго шёл к ней и держал в руках синюю папку." }
+  ];
+  var dreams = [];
+  var mode = "init";      // "cloud" | "local"
+  var col = null;
+  var ready = false;
+  var sampleFn = null;
+  var LS_KEY = "omut-pamyati-dreams-v1";
+
+  function visible() {
+    var list = dreams.length ? dreams.slice() : examples.slice();
+    list.sort(function (a, b) { return new Date(b.createdAt) - new Date(a.createdAt); });
+    return list;
+  }
+
+  /* ---------- storage ---------- */
+  function loadLocal() {
+    try {
+      var raw = localStorage.getItem(LS_KEY);
+      var arr = raw ? JSON.parse(raw) : [];
+      if (Array.isArray(arr)) dreams = arr.filter(function (d) { return d && typeof d.text === "string" && d.createdAt; });
+    } catch (e) { dreams = []; }
+  }
+  function saveLocal() {
+    try { localStorage.setItem(LS_KEY, JSON.stringify(dreams)); return true; } catch (e) { return false; }
+  }
+  function setReady(note) {
+    ready = true;
+    $("#saveBtn").disabled = false;
+    $("#saveStatus").textContent = "";
+    $("#storeNote").textContent = note;
+    renderList();
+  }
+  function initStorage() {
+    mode = "local";
+    loadLocal();
+    setReady("Записи хранятся только в этом браузере на этом устройстве. Если очистить данные сайта, они пропадут.");
+  }
+
+  async function saveDream(text) {
+    var rec = { text: text, createdAt: new Date().toISOString() };
+    if (mode === "cloud") {
+      await col.doc().set(rec);
+    } else {
+      rec.id = "l" + Date.now().toString(36);
+      dreams.unshift(rec);
+      if (!saveLocal()) throw new Error("local");
+      renderList();
+    }
+    return rec;
+  }
+  async function removeDream(id) {
+    try {
+      if (mode === "cloud") {
+        await col.doc(id).delete();
+      } else {
+        dreams = dreams.filter(function (d) { return d.id !== id; });
+        saveLocal();
+        renderList();
+      }
+    } catch (e) {
+      $("#saveStatus").textContent = "Не удалось удалить запись. Попробуйте ещё раз.";
+    }
+  }
+
+  /* ---------- rendering ---------- */
+  function metaRow(d) {
+    var m = el("div", "meta");
+    m.appendChild(el("span", null, fmt(d.createdAt)));
+    m.appendChild(el("span", null, ago(d.createdAt)));
+    if (d.example) m.appendChild(el("span", "tag", "Пример"));
+    return m;
+  }
+  function dreamCard(d) {
+    var c = el("article", "card");
+    c.appendChild(metaRow(d));
+    c.appendChild(el("p", "dream", d.text));
+    if (!d.example) {
+      var act = el("div", "actions");
+      var del = el("button", "link", "Удалить");
+      del.type = "button";
+      del.addEventListener("click", function () {
+        act.textContent = "";
+        act.appendChild(el("span", "muted small", "Удалить навсегда?"));
+        var yes = el("button", "link danger", "Да, удалить");
+        yes.type = "button";
+        yes.addEventListener("click", function () { removeDream(d.id); });
+        var no = el("button", "link", "Отмена");
+        no.type = "button";
+        no.addEventListener("click", function () { renderList(); });
+        act.appendChild(yes);
+        act.appendChild(no);
+      });
+      act.appendChild(del);
+      c.appendChild(act);
+    }
+    return c;
+  }
+  function renderList() {
+    var box = $("#list");
+    box.textContent = "";
+    visible().forEach(function (d) { box.appendChild(dreamCard(d)); });
+    $("#count").textContent = dreams.length ? dreams.length + " " + plural(dreams.length, ["запись", "записи", "записей"]) : "";
+    $("#exNote").hidden = !(ready && dreams.length === 0);
+  }
+
+  /* ---------- search ---------- */
+  function localSearch(qs) {
+    var out = [];
+    visible().forEach(function (d) {
+      var ds = stemSet(d.text), n = 0;
+      qs.forEach(function (s) { if (ds.has(s)) n++; });
+      if (n > 0) out.push({ d: d, count: n });
+    });
+    out.sort(function (a, b) { return b.count - a.count || new Date(b.d.createdAt) - new Date(a.d.createdAt); });
+    return out.slice(0, 5);
+  }
+  function resultCard(d, qs, info) {
+    var c = el("article", "card");
+    c.appendChild(metaRow(d));
+    if (info.score != null) {
+      var sc = el("div", "score");
+      sc.appendChild(el("span", null, "Сходство ≈ " + info.score + "%"));
+      var mt = el("div", "meter");
+      var bar = el("span");
+      bar.style.width = info.score + "%";
+      mt.appendChild(bar);
+      sc.appendChild(mt);
+      c.appendChild(sc);
+    } else {
+      c.appendChild(el("div", "score", "Общих слов: " + info.count));
+    }
+    if (info.why) c.appendChild(el("p", "why", info.why));
+    var p = el("p", "dream");
+    p.appendChild(highlight(d.text, qs));
+    c.appendChild(p);
+    return c;
+  }
+  function renderResults(qs, local, sem) {
+    var box = $("#results");
+    box.textContent = "";
+    function group(title, nodes) {
+      box.appendChild(el("h3", null, title));
+      nodes.forEach(function (n) { box.appendChild(n); });
+    }
+    function localNodes() { return local.map(function (r) { return resultCard(r.d, qs, { count: r.count }); }); }
+    if (sem && sem.length) {
+      group("Похожие по смыслу", sem.map(function (r) { return resultCard(r.d, qs, { score: r.score, why: r.why }); }));
+    } else if (sem) {
+      box.appendChild(el("div", "empty", "По смыслу ничего похожего не нашлось."));
+      if (local.length) group("Но есть общие слова", localNodes());
+    } else if (local.length) {
+      group("Совпадения по словам", localNodes());
+    } else {
+      box.appendChild(el("div", "empty", "Общих слов со снами нет. Попробуйте описать место, людей или предметы подробнее."));
+    }
+  }
+
+  var ctl = null;
+  function errCopy(code) {
+    if (code === "not_granted") return "Поиск по смыслу выключен: доступ к Claude не разрешён. Показаны совпадения по словам.";
+    if (code === "rate_limited") return "Слишком много запросов. Показаны совпадения по словам, повторите позже.";
+    return "Поиск по смыслу сейчас не сработал. Показаны совпадения по словам.";
+  }
+  async function runSearch(q) {
+    var qs = stemSet(q);
+    var items = visible();
+    var local = localSearch(qs);
+    renderResults(qs, local, null);
+    var status = $("#findStatus");
+    status.textContent = "";
+    if (!sampleFn) return;
+
+    if (ctl) ctl.abort();
+    var mine = new AbortController();
+    ctl = mine;
+    $("#findBtn").disabled = true;
+    $("#stopBtn").hidden = false;
+    status.textContent = "Ищу по смыслу…";
+
+    var payload = items.slice(0, 80).map(function (d) { return { id: d.id, text: d.text.slice(0, 600) }; });
+    var prompt =
+      "Ты помогаешь вести дневник снов. Человек прямо сейчас испытывает дежавю и описывает, что происходит. " +
+      "Найди среди его снов те, что действительно похожи по смыслу: место, люди, предметы, фразы, обстановка, ощущения. " +
+      "Не натягивай совпадения: слабое сходство не включай. Не пиши про предсказания и мистику.\n" +
+      "Ответь только JSON-массивом, не больше 5 элементов, по убыванию сходства: " +
+      "[{\"id\": \"...\", \"score\": число от 0 до 100, \"why\": \"одна короткая фраза о том, что именно совпало\"}]. " +
+      "Если похожих снов нет, верни [].\n\n" +
+      "Описание дежавю:\n<<<\n" + q.slice(0, 2000) + "\n>>>\n\n" +
+      "Сны (JSON):\n" + JSON.stringify(payload);
+
+    try {
+      var arr = await sampleFn.json(prompt, { modelTier: "quick", signal: mine.signal });
+      if (ctl !== mine) return;
+      var byId = {};
+      items.forEach(function (d) { byId[d.id] = d; });
+      var sem = (Array.isArray(arr) ? arr : []).map(function (r) {
+        var d = r && byId[String(r.id)];
+        var s = Math.round(Number(r && r.score));
+        if (!d || !isFinite(s)) return null;
+        return { d: d, score: Math.max(0, Math.min(100, s)), why: typeof r.why === "string" ? r.why : "" };
+      }).filter(function (r) { return r && r.score >= 30; })
+        .sort(function (a, b) { return b.score - a.score; })
+        .slice(0, 5);
+      renderResults(qs, local, sem);
+      status.textContent = "";
+    } catch (e) {
+      if (ctl !== mine) return;
+      status.textContent = e && e.code === "cancelled" ? "" : errCopy(e && e.code);
+    } finally {
+      if (ctl === mine) {
+        ctl = null;
+        $("#findBtn").disabled = false;
+        $("#stopBtn").hidden = true;
+      }
+    }
+  }
+
+  /* ---------- wiring ---------- */
+  $("#recForm").addEventListener("submit", async function (e) {
+    e.preventDefault();
+    var t = $("#dreamText").value.trim();
+    var status = $("#saveStatus");
+    if (t.length < 5) { status.textContent = "Опишите сон хотя бы несколькими словами."; return; }
+    var btn = $("#saveBtn");
+    btn.disabled = true;
+    status.textContent = "Сохраняю…";
+    try {
+      var rec = await saveDream(t);
+      $("#dreamText").value = "";
+      status.textContent = "Сон записан: " + fmt(rec.createdAt) + ". Текст теперь нельзя изменить.";
+    } catch (err) {
+      status.textContent = "Не удалось сохранить. Текст остался в поле, попробуйте ещё раз.";
+    } finally {
+      btn.disabled = !ready;
+    }
+  });
+
+  $("#dejaForm").addEventListener("submit", function (e) {
+    e.preventDefault();
+    var q = $("#dejaText").value.trim();
+    if (q.length < 8) { $("#findStatus").textContent = "Опишите, что происходит, хотя бы парой фраз."; return; }
+    runSearch(q);
+  });
+  $("#stopBtn").addEventListener("click", function () { if (ctl) ctl.abort(); });
+
+  function show(name) {
+    var deja = name === "deja";
+    $("#view-record").hidden = deja;
+    $("#view-deja").hidden = !deja;
+    $("#tab-record").setAttribute("aria-selected", String(!deja));
+    $("#tab-deja").setAttribute("aria-selected", String(deja));
+  }
+  function route() { show((location.hash || "").replace("#", "") === "deja" ? "deja" : "record"); }
+  $("#tab-record").addEventListener("click", function () { show("record"); try { location.hash = "record"; } catch (e) {} });
+  $("#tab-deja").addEventListener("click", function () { show("deja"); try { location.hash = "deja"; } catch (e) {} });
+  window.addEventListener("hashchange", route);
+  route();
+
+  renderList();
+  initStorage();
+  /* ---------- voice input ---------- */
+  var SR = window.SpeechRecognition || window.webkitSpeechRecognition;
+  var micErr = {
+    "not-allowed": "Нет доступа к микрофону. Разрешите его для этого сайта в настройках браузера.",
+    "service-not-allowed": "Нет доступа к распознаванию речи. Проверьте настройки браузера и диктовки.",
+    "no-speech": "Речь не слышна. Нажмите микрофон и повторите.",
+    "audio-capture": "Микрофон не найден.",
+    "network": "Для распознавания речи нужен интернет."
+  };
+  if (!SR) {
+    document.querySelectorAll(".mic").forEach(function (b) { b.hidden = true; });
+    $("#micHint").textContent = "Этот браузер не распознаёт речь. Диктуйте кнопкой микрофона на клавиатуре телефона.";
+  } else {
+    $("#micHint").textContent = "Нажмите на микрофон справа в поле и рассказывайте. Нажмите ещё раз, чтобы закончить.";
+    var current = null;
+    document.querySelectorAll(".mic").forEach(function (btn) {
+      var ta = document.getElementById(btn.dataset.target);
+      var status = document.getElementById(btn.dataset.status);
+      btn.addEventListener("click", function () {
+        if (current && current.btn === btn) { current.rec.stop(); return; }
+        if (current) current.rec.stop();
+        var rec = new SR();
+        rec.lang = "ru-RU";
+        rec.interimResults = true;
+        rec.continuous = true;
+        var base = ta.value && !/\s$/.test(ta.value) ? ta.value + " " : ta.value;
+        rec.onresult = function (e) {
+          var t = "";
+          for (var i = 0; i < e.results.length; i++) t += e.results[i][0].transcript;
+          ta.value = base + t;
+        };
+        rec.onerror = function (e) { status.textContent = micErr[e.error] || "Не удалось распознать речь. Попробуйте ещё раз."; };
+        rec.onend = function () {
+          btn.classList.remove("rec");
+          btn.setAttribute("aria-pressed", "false");
+          if (current && current.btn === btn) current = null;
+        };
+        try {
+          rec.start();
+          current = { btn: btn, rec: rec };
+          btn.classList.add("rec");
+          btn.setAttribute("aria-pressed", "true");
+          status.textContent = "Слушаю…";
+        } catch (err) { status.textContent = "Не удалось включить микрофон."; }
+      });
+    });
+  }
+})();
+</script>
+</body>
+</html>
